@@ -6,18 +6,24 @@ import (
 	"net"
 	"net/textproto"
 	"os"
+	"io"
 	"strings"
 )
 
-func handleConnection(conn net.Conn, storage map[string]string) {
-	buf := *bufio.NewReader(conn)
+type sessionHandler struct {
+	conn   io.ReadWriteCloser
+	store  map[string]string
+}
+
+func (s *sessionHandler) handleConnection() {
+	buf := bufio.NewReader(s.conn)
 
 	for {
-		msg, err := textproto.NewReader(&buf).ReadLine()
+		msg, err := textproto.NewReader(buf).ReadLine()
 
 		command := strings.SplitN(msg, " ", 2)
 		if len(command) < 2 {
-			conn.Write([]byte("Invalid instruction. Use following pattern: GET/SET key [value]\n"))
+			s.conn.Write([]byte("Invalid instruction. Use following pattern: GET/SET key [value]\n"))
 			continue
 		}
 
@@ -28,31 +34,31 @@ func handleConnection(conn net.Conn, storage map[string]string) {
 
 		switch command[0] {
 		case "GET":
-			getValue(conn, storage, command[1])
+			s.getValue(command[1])
 		case "SET":
-			setValue(conn, storage, command[1])
+			s.setValue(command[1])
 		default:
-			conn.Write([]byte("Unknown command.\n"))
+			s.conn.Write([]byte("Unknown command.\n"))
 		}
 	}
 
-	conn.Close()
+	s.conn.Close()
 }
 
-func setValue(conn net.Conn, storage map[string]string, command string) {
+func (s *sessionHandler) setValue(command string) {
 	instruction := strings.SplitN(command, " ", 2)
 	if len(command) < 2 {
-		conn.Write([]byte("Invalid SET syntax. Use GET key value\n"))
+		s.conn.Write([]byte("Invalid SET syntax. Use GET key value\n"))
 		return
 	}
 
-	storage[instruction[0]] = instruction[1]
-	conn.Write([]byte("OK\n"))
+	s.store[instruction[0]] = instruction[1]
+	s.conn.Write([]byte("OK\n"))
 }
 
-func getValue(conn net.Conn, storage map[string]string, key string) {
-	value := storage[key]
-	conn.Write([]byte(value + "\n"))
+func (s *sessionHandler) getValue(key string) {
+	value := s.store[key]
+	s.conn.Write([]byte(value + "\n"))
 }
 
 func main() {
@@ -76,6 +82,8 @@ func main() {
 			panic(err)
 		}
 
-		go handleConnection(conn, storage)
+		handler := sessionHandler{conn, storage}
+
+		go handler.handleConnection()
 	}
 }
