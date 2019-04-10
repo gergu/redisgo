@@ -13,10 +13,14 @@ import (
 type sessionHandler struct {
 	conn   io.ReadWriteCloser
 	store  map[string]string
+	password string
+	authenticated bool
 }
 
 func (s *sessionHandler) handleConnection() {
 	buf := bufio.NewReader(s.conn)
+
+	defer s.conn.Close()
 
 	for {
 		msg, err := textproto.NewReader(buf).ReadLine()
@@ -32,6 +36,16 @@ func (s *sessionHandler) handleConnection() {
 			break
 		}
 
+		if command[0] == "AUTH" {
+			s.auth(command[1])
+			continue
+		}
+
+		if !s.authenticated {
+			s.conn.Write([]byte("-NOAUTH Authentication required.\n"))
+			continue
+		}
+
 		switch command[0] {
 		case "GET":
 			s.getValue(command[1])
@@ -41,8 +55,6 @@ func (s *sessionHandler) handleConnection() {
 			s.conn.Write([]byte("Unknown command.\n"))
 		}
 	}
-
-	s.conn.Close()
 }
 
 func (s *sessionHandler) setValue(command string) {
@@ -59,6 +71,21 @@ func (s *sessionHandler) setValue(command string) {
 func (s *sessionHandler) getValue(key string) {
 	value := s.store[key]
 	s.conn.Write([]byte(value + "\n"))
+}
+
+func (s *sessionHandler) initAuth() {
+	if s.password != "" {
+		s.authenticated = false
+	}
+}
+
+func (s *sessionHandler) auth(passwd string) {
+	if passwd == s.password {
+		s.authenticated = true
+		s.conn.Write([]byte("+OK\n"))
+	} else {
+		s.conn.Write([]byte("-ERR invalid password\n"))
+	}
 }
 
 func main() {
@@ -82,7 +109,8 @@ func main() {
 			panic(err)
 		}
 
-		handler := sessionHandler{conn, storage}
+		handler := sessionHandler{conn, storage, password, true}
+		handler.initAuth()
 
 		go handler.handleConnection()
 	}
