@@ -1,0 +1,22 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/golang:1.10.2
+
+    working_directory: /go/src/github.com/gergu/redisgo
+    steps:
+      - checkout
+
+      - run:
+          name: Setup test suite
+          command: go get github.com/stretchr/testify
+      - run:
+          name: Run test suite
+          command: go test -v -race -coverprofile=coverage.txt -covermode=atomic
+      - run:
+          name: Upload coverage data
+          command: bash <(curl -s https://codecov.io/bash)

@@ -1,11 +1,11 @@
 package main
 
 import (
-	"os"
 	"bufio"
 	"fmt"
 	"net"
 	"net/textproto"
+	"os"
 	"strings"
 )
 
@@ -61,7 +61,7 @@ func main() {
 
 	storage := make(map[string]string)
 
-	if len(args)>1 {
+	if len(args) > 1 {
 		PORT = ":" + args[1]
 	}
 
