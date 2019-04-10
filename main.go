@@ -4,8 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"net"
+	"flag"
 	"net/textproto"
-	"os"
 	"io"
 	"strings"
 )
@@ -62,16 +62,16 @@ func (s *sessionHandler) getValue(key string) {
 }
 
 func main() {
-	args := os.Args
-	PORT := ":6379"
+	var port string
+	var password string
+	flag.StringVar(&port, "port", "6379", "port")
+	flag.StringVar(&password, "password", "", "password")
+
+	flag.Parse()
 
 	storage := make(map[string]string)
 
-	if len(args) > 1 {
-		PORT = ":" + args[1]
-	}
-
-	ln, err := net.Listen("tcp", PORT)
+	ln, err := net.Listen("tcp", ":" + port)
 	if err != nil {
 		panic(err)
 	}
