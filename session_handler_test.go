@@ -41,6 +41,15 @@ func TestGetValue(t *testing.T) {
   assert.Equal(t, "value\n", conn.String())
 }
 
+func TestInitAuth(t *testing.T) {
+	conn := ConnectionMock{}
+	storage := make(map[string]string)
+
+	handler := sessionHandler{&conn, storage, "password", true}
+
+	handler.initAuth()
+	assert.Equal(t, handler.authenticated, false)
+}
 
 func TestAuth(t *testing.T) {
 	conn := ConnectionMock{}
@@ -62,7 +71,6 @@ func TestAuth(t *testing.T) {
   assert.Equal(t, "+OK\n", conn.String())
   assert.Equal(t, true, handler.authenticated)
 }
-
 
 func TestHandleCommand(t *testing.T) {
 	conn := ConnectionMock{}
